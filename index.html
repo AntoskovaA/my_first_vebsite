@@ -25,12 +25,12 @@
             box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
             border-radius: 8px;
             width: 100%;
-            max-width: 100%;
-            height: 100%;
+            max-width: 800px;
+            height: auto;
+            margin: auto;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
         }
 
         h1 {
@@ -39,7 +39,7 @@
             margin: 20px 0;
         }
 
-        input[type="text"] {
+        input[type="text"], input[type="number"], input[type="date"] {
             width: 80%;
             padding: 10px;
             margin-bottom: 10px;
@@ -66,8 +66,7 @@
         ul {
             list-style-type: none;
             padding: 0;
-            width: 80%;
-            max-width: 600px;
+            width: 100%;
             flex-grow: 1;
             overflow-y: auto;
         }
@@ -81,6 +80,10 @@
             justify-content: space-between;
             align-items: center;
         }
+
+            li input[type="checkbox"] {
+                margin-right: 10px;
+            }
 
             li button {
                 background-color: #e74c3c;
@@ -101,37 +104,107 @@
     <div class="container">
         <h1>Список завдань</h1>
         <input type="text" id="taskInput" placeholder="Нове завдання...">
+        <input type="number" id="priorityInput" placeholder="Пріоритет (1-5)">
+        <input type="text" id="dueDateInput" placeholder="Дата виконання (DD/MM/YYYY)">
         <button onclick="addTask()">Додати</button>
         <ul id="taskList"></ul>
     </div>
 
     <script>
+        const taskList = document.getElementById("taskList");
+
+        // Завантаження списку з локального сховища
+        window.onload = () => {
+            const savedTasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            savedTasks.forEach(task => addTaskToDOM(task));
+        };
+
         function addTask() {
             const taskInput = document.getElementById("taskInput");
-            const taskText = taskInput.value.trim();
+            const priorityInput = document.getElementById("priorityInput");
+            const dueDateInput = document.getElementById("dueDateInput");
 
-            if (taskText === "") {
-                alert("Будь ласка, введіть завдання!");
+            const taskText = taskInput.value.trim();
+            const priority = priorityInput.value.trim();
+            const dueDate = dueDateInput.value.trim();
+
+            if (!taskText || !priority.match(/^[1-5]$/) || !dueDate.match(/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/[0-9]{4}$/)) {
+                alert("Будь ласка, введіть коректні дані!");
                 return;
             }
 
-            const taskList = document.getElementById("taskList");
+            const task = { text: taskText, priority, dueDate, completed: false };
+            addTaskToDOM(task);
 
+            saveTaskToLocal(task);
+
+            taskInput.value = "";
+            priorityInput.value = "";
+            dueDateInput.value = "";
+        }
+
+        function addTaskToDOM(task) {
             const li = document.createElement("li");
-            li.textContent = taskText;
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = task.completed;
+            checkbox.onchange = () => toggleTaskCompletion(task, checkbox.checked);
+
+            const taskInfo = document.createElement("span");
+            taskInfo.textContent = `${task.text} (Пріоритет: ${task.priority}, До: ${task.dueDate})`;
+
+            const editButton = document.createElement("button");
+            editButton.textContent = "Редагувати";
+            editButton.onclick = () => editTask(task, li);
 
             const deleteButton = document.createElement("button");
             deleteButton.textContent = "Видалити";
-            deleteButton.onclick = function () {
-                taskList.removeChild(li);
-            };
+            deleteButton.onclick = () => deleteTask(task, li);
 
+            li.appendChild(checkbox);
+            li.appendChild(taskInfo);
+            li.appendChild(editButton);
             li.appendChild(deleteButton);
-            taskList.appendChild(li);
 
-            taskInput.value = "";
+            taskList.appendChild(li);
+        }
+
+        function saveTaskToLocal(task) {
+            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            tasks.push(task);
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+        }
+
+        function toggleTaskCompletion(task, completed) {
+            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            const updatedTasks = tasks.map(t => t.text === task.text ? { ...t, completed } : t);
+            localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+        }
+
+        function editTask(task, li) {
+            const newText = prompt("Редагувати завдання:", task.text);
+            if (newText) {
+                task.text = newText;
+                updateTaskInLocal(task);
+                li.querySelector("span").textContent = `${task.text} (Пріоритет: ${task.priority}, До: ${task.dueDate})`;
+            }
+        }
+
+        function deleteTask(task, li) {
+            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            const updatedTasks = tasks.filter(t => t.text !== task.text);
+            localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+            taskList.removeChild(li);
+        }
+
+        function updateTaskInLocal(task) {
+            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            const updatedTasks = tasks.map(t => t.text === task.text ? task : t);
+            localStorage.setItem("tasks", JSON.stringify(updatedTasks));
         }
     </script>
 </body>
 </html>
 </html>
+
